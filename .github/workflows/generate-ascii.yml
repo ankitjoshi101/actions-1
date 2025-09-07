@@ -1,17 +1,49 @@
 name: Generate ASCII Artwork
 
-
-on: push
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
-    ascii_job: 
-        runs-on: ubuntu-latest
-        steps:
-            - name: checkout Repo
-              uses: actions/checkout@v5
+  ascii_job:
+    runs-on: ubuntu-latest
 
-            - name: List Repo Files
-              run: ls -ltra    
-            
-            - name: Executing Shell Script
-              run: ./ascii-script.sh
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Make script executable (if present)
+        run: |
+          if [ -f ./ascii-script.sh ]; then
+            chmod +x ./ascii-script.sh
+          fi
+
+      - name: Install ASCII tools (figlet & toilet)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y figlet toilet
+
+      - name: List repo files
+        run: ls -ltra
+
+      - name: Execute script (creates ascii-art.txt)
+        run: |
+          if [ -f ./ascii-script.sh ]; then
+            ./ascii-script.sh
+          else
+            echo "ascii-script.sh not found; generating a default example..."
+            figlet "Hello World" > ascii-art.txt
+            echo "" >> ascii-art.txt
+            toilet -f pagga "from CI" -F border >> ascii-art.txt
+          fi
+
+      - name: Show result
+        run: |
+          echo "---- ascii-art.txt ----"
+          [ -f ascii-art.txt ] && cat ascii-art.txt || echo "No ascii-art.txt produced."
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ascii-art
+          path: ascii-art.txt
